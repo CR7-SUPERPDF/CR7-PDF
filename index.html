@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foliador Industrial v3.0</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-10">
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <div class="lg:col-span-4 bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl space-y-6">
+            <div>
+                <h1 class="text-2xl font-black text-blue-400 leading-none">FOLIADOR PRO</h1>
+                <p class="text-slate-400 text-xs mt-2 uppercase tracking-widest">Versión Industrial 3.0</p>
+            </div>
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Inicio</label>
+                        <input type="number" id="startNum" value="1" class="w-full bg-slate-700 border-none rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Fin (Opcional)</label>
+                        <input type="number" id="endNum" placeholder="Auto" class="w-full bg-slate-700 border-none rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Formato de Texto</label>
+                    <select id="format" class="w-full bg-slate-700 border-none rounded-lg p-2.5 outline-none">
+                        <option value="both">1 (UNO)</option>
+                        <option value="num">Solo Número (1)</option>
+                        <option value="text">Solo Letras (UNO)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Tipografía</label>
+                    <select id="font" class="w-full bg-slate-700 border-none rounded-lg p-2.5 outline-none">
+                        <option value="HelveticaBold">Arial / Helvetica Bold</option>
+                        <option value="TimesRomanBold">Times New Roman Bold</option>
+                        <option value="CourierBold">Courier (Retro)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-750 border border-slate-700 p-3 rounded-lg">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="mergeFiles" checked class="w-5 h-5 rounded border-none bg-slate-600 text-blue-500">
+                        <span class="text-sm font-medium">Unir archivos en un solo PDF</span>
+                    </label>
+                </div>
+
+                <button onclick="processFiles()" id="btnAction" disabled class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-900/20 uppercase tracking-wider">
+                    Foliar Documentos
+                </button>
+            </div>
+        </div>
+
+        <div class="lg:col-span-8 space-y-6">
+            <div id="dropZone" class="border-4 border-dashed border-slate-700 rounded-3xl p-10 text-center hover:border-blue-500 hover:bg-blue-500/5 transition-all cursor-pointer group flex flex-col items-center justify-center min-h-[300px]">
+                <input type="file" id="fileInput" multiple accept=".pdf" class="hidden">
+                <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                </div>
+                <h2 class="text-xl font-bold">Arrastra tus PDFs aquí</h2>
+                <p class="text-slate-500 text-sm mt-2">Puedes subir varios archivos a la vez</p>
+                <div id="fileList" class="mt-6 flex flex-wrap gap-2 justify-center"></div>
+            </div>
+
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+                <p class="text-xs font-bold text-slate-500 mb-4 uppercase">Vista previa del folio (Esquina Superior Derecha)</p>
+                <div class="bg-white w-full h-32 rounded-lg relative overflow-hidden">
+                    <div class="absolute top-4 right-4 text-red-600 font-bold text-lg border-2 border-red-600 px-2 py-1 rounded" id="previewLabel">
+                        1 (UNO)
+                    </div>
+                    <div class="p-6 space-y-2 opacity-10">
+                        <div class="h-3 bg-slate-900 w-full rounded"></div>
+                        <div class="h-3 bg-slate-900 w-5/6 rounded"></div>
+                        <div class="h-3 bg-slate-900 w-4/6 rounded"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const btnAction = document.getElementById('btnAction');
+        let selectedFiles = [];
+
+        // --- LÓGICA DE ARRASTRAR Y SOLTAR ---
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => {
+            dropZone.addEventListener(e, (evt) => { evt.preventDefault(); evt.stopPropagation(); });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            handleFiles(e.dataTransfer.files);
+        });
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            const newFiles = [...files].filter(f => f.type === "application/pdf");
+            selectedFiles = [...selectedFiles, ...newFiles];
+            renderFileList();
+        }
+
+        function renderFileList() {
+            fileList.innerHTML = '';
+            selectedFiles.forEach((f, idx) => {
+                const tag = document.createElement('div');
+                tag.className = "bg-blue-500/10 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full text-xs flex items-center gap-2";
+                tag.innerHTML = `<span>${f.name}</span><button onclick="event.stopPropagation(); removeFile(${idx})" class="hover:text-red-500 font-bold">×</button>`;
+                fileList.appendChild(tag);
+            });
+            btnAction.disabled = selectedFiles.length === 0;
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        }
+
+        // --- CONVERSOR DE NÚMEROS ---
+        function numALetras(n) {
+            const u = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+            const d = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+            const e = {11:'ONCE', 12:'DOCE', 13:'TRECE', 14:'CATORCE', 15:'QUINCE', 16:'DIECISÉIS', 17:'DIECISIETE', 18:'DIECIOCHO', 19:'DIECINUEVE', 21:'VEINTIUNO', 22:'VEINTIDÓS', 23:'VEINTITRÉS', 24:'VEINTICUATRO', 25:'VEINTICINCO', 26:'VEINTISÉIS', 27:'VEINTISIETE', 28:'VEINTIOCHO', 29:'VEINTINUEVE'};
+            
+            if (n === 0) return 'CERO';
+            if (n < 10) return u[n];
+            if (e[n]) return e[n];
+            if (n < 100) {
+                let unidad = n % 10;
+                let decena = Math.floor(n / 10);
+                return d[decena] + (unidad > 0 ? ' Y ' + u[unidad] : '');
+            }
+            if (n < 1000) {
+                if (n === 100) return 'CIEN';
+                let centena = Math.floor(n / 100);
+                const c = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+                return c[centena] + ' ' + numALetras(n % 100);
+            }
+            return n.toString();
+        }
+
+        // --- PROCESAMIENTO ---
+        async function processFiles() {
+            const { PDFDocument, StandardFonts, rgb } = PDFLib;
+            const start = parseInt(document.getElementById('startNum').value);
+            const end = parseInt(document.getElementById('endNum').value) || Infinity;
+            const format = document.getElementById('format').value;
+            const fontName = document.getElementById('font').value;
+            
+            btnAction.textContent = "PROCESANDO...";
+            btnAction.disabled = true;
+
+            try {
+                const finalPdf = await PDFDocument.create();
+                let currentFolio = start;
+
+                for (const file of selectedFiles) {
+                    const bytes = await file.arrayBuffer();
+                    const sourcePdf = await PDFDocument.load(bytes);
+                    const pages = await finalPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
+                    const font = await finalPdf.embedFont(StandardFonts[fontName]);
+
+                    for (const page of pages) {
+                        if (currentFolio > end) break;
+
+                        const { width, height } = page.getSize();
+                        let label = "";
+                        if (format === 'num') label = currentFolio.toString();
+                        else if (format === 'text') label = numALetras(currentFolio);
+                        else label = `${currentFolio} (${numALetras(currentFolio)})`;
+
+                        page.drawText(label, {
+                            x: width - (label.length * 7) - 40,
+                            y: height - 40,
+                            size: 11,
+                            font: font,
+                            color: rgb(0.8, 0, 0)
+                        });
+                        finalPdf.addPage(page);
+                        currentFolio++;
+                    }
+                }
+
+                const pdfBytes = await finalPdf.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `EXPEDIENTE_FOLIADO.pdf`;
+                link.click();
+                
+                btnAction.textContent = "¡ÉXITO!";
+                setTimeout(() => { btnAction.textContent = "FOLIAR DOCUMENTOS"; btnAction.disabled = false; }, 2000);
+            } catch (err) {
+                alert("Error: " + err.message);
+                btnAction.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
