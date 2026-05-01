@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foliador Pro Industrial v5.0</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .active-style { border-color: #3b82f6; background-color: #1e40af; }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-slate-200 min-h-screen p-4 md:p-8 font-sans">
+
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <div class="lg:col-span-4 space-y-4">
+            <div class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700 shadow-2xl space-y-4">
+                <div>
+                    <h1 class="text-2xl font-black text-blue-500 mb-1">FOLIADOR PRO</h1>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-widest">Versión Industrial 5.0</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Inicio</label>
+                        <input type="number" id="startNum" value="1" oninput="updatePreview()" class="w-full bg-[#0f172a] border-none rounded-lg p-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Fin</label>
+                        <input type="number" id="endNum" placeholder="100" class="w-full bg-[#0f172a] border-none rounded-lg p-2 text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Estilo</label>
+                        <div class="flex gap-1">
+                            <button onclick="toggleStyle('bold')" id="btnBold" class="flex-1 bg-slate-700 p-1 rounded font-bold border-2 border-transparent">B</button>
+                            <button onclick="toggleStyle('italic')" id="btnItalic" class="flex-1 bg-slate-700 p-1 rounded italic border-2 border-transparent">I</button>
+                            <button onclick="toggleStyle('underline')" id="btnUnderline" class="flex-1 bg-slate-700 p-1 rounded underline border-2 border-transparent">U</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Color</label>
+                        <div class="flex gap-1 items-center">
+                            <button onclick="setColor('#000000')" class="w-6 h-6 rounded-full bg-black border border-slate-500"></button>
+                            <button onclick="setColor('#ff0000')" class="w-6 h-6 rounded-full bg-red-600 border border-slate-500"></button>
+                            <button onclick="setColor('#0000ff')" class="w-6 h-6 rounded-full bg-blue-600 border border-slate-500"></button>
+                            <input type="color" id="folioColor" value="#000000" oninput="updatePreview()" class="w-8 h-8 bg-transparent cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tipografía</label>
+                    <select id="font" class="w-full bg-[#0f172a] border-none rounded-lg p-2 text-xs">
+                        <option value="Helvetica">Arial / Calibri / Helvetica</option>
+                        <option value="TimesRoman">Times New Roman / Georgia / Cambria</option>
+                        <option value="Courier">Courier / Lucida</option>
+                        <option value="Palatino">Palatino Linotype / Serif</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Orientación de Hoja</label>
+                    <select id="orientation" onchange="updatePreview()" class="w-full bg-[#0f172a] border-none rounded-lg p-2 text-xs">
+                        <option value="portrait">Vertical (Normal)</option>
+                        <option value="landscape">Horizontal (Apaisado)</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="setAlign('left')" class="flex-1 bg-slate-700 p-2 rounded">⟸</button>
+                    <button onclick="setAlign('center')" class="flex-1 bg-slate-700 p-2 rounded">⟺</button>
+                    <button onclick="setAlign('right')" class="flex-1 bg-blue-600 p-2 rounded" id="btnAlignR">⟹</button>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Ajuste de Altura (Margen)</label>
+                    <input type="range" id="vPos" min="10" max="300" value="40" oninput="updatePreview()" class="w-full accent-blue-500">
+                </div>
+
+                <button onclick="processFiles()" id="btnAction" disabled class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white font-bold py-4 rounded-xl shadow-lg uppercase text-sm">
+                    Foliar Documentos
+                </button>
+            </div>
+            
+            <button onclick="generateBlankPages()" class="w-full border-2 border-dashed border-slate-600 p-3 rounded-xl hover:border-blue-500 hover:text-blue-400 transition text-[10px] font-bold uppercase tracking-widest">
+                + Generar Hojas en Blanco Foliadas (Rango definido)
+            </button>
+        </div>
+
+        <div class="lg:col-span-8 space-y-6">
+            <div id="dropZone" class="bg-[#1e293b]/50 border-4 border-dashed border-slate-700 rounded-3xl p-6 text-center hover:border-blue-500 transition-all min-h-[200px] flex flex-col items-center justify-center">
+                <input type="file" id="fileInput" multiple accept=".pdf" class="hidden">
+                <div id="emptyMsg">
+                    <p class="font-bold">Arrastra tus PDFs aquí</p>
+                    <p class="text-[10px] text-slate-500">Miniaturas se generarán automáticamente</p>
+                </div>
+                <div id="fileThumbnails" class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full"></div>
+            </div>
+
+            <div class="bg-[#1e293b] rounded-2xl border border-slate-700 p-6 shadow-xl">
+                <h3 class="text-xs font-bold text-slate-500 uppercase mb-4 italic">Vista Previa Dinámica</h3>
+                <div id="pageContainer" class="bg-white mx-auto transition-all duration-300 shadow-inner relative overflow-hidden" style="width: 210px; height: 297px;">
+                    <div class="absolute inset-0 p-4 space-y-2 opacity-5">
+                        <div class="h-1 bg-black w-full"></div><div class="h-1 bg-black w-full"></div><div class="h-1 bg-black w-full"></div><div class="h-1 bg-black w-3/4"></div>
+                    </div>
+                    <div id="previewFolio" class="absolute font-bold text-[10px] pointer-events-none" style="top: 20px; right: 20px; color: black;">
+                        1 UNO
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { PDFDocument, StandardFonts, rgb } = PDFLib;
+        let selectedFiles = [];
+        let currentAlign = 'right';
+        let styles = { bold: false, italic: false, underline: false };
+
+        // Conversión Corregida (Mejora 5: UNO en vez de UN)
+        function numALetras(n) {
+            const u = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+            const d = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+            const e = {11:'ONCE', 12:'DOCE', 13:'TRECE', 14:'CATORCE', 15:'QUINCE', 16:'DIECISÉIS', 17:'DIECISIETE', 18:'DIECIOCHO', 19:'DIECINUEVE', 21:'VEINTIUNO', 22:'VEINTIDÓS', 23:'VEINTITRÉS', 24:'VEINTICUATRO', 25:'VEINTICINCO', 26:'VEINTISÉIS', 27:'VEINTISIETE', 28:'VEINTIOCHO', 29:'VEINTINUEVE'};
+            n = parseInt(n);
+            if (n === 0) return 'CERO';
+            if (n < 10) return u[n];
+            if (e[n]) return e[n];
+            if (n < 100) return d[Math.floor(n/10)] + (n%10 !== 0 ? ' Y ' + u[n%10] : '');
+            if (n < 1000) {
+                if (n === 100) return 'CIEN';
+                const c = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+                return c[Math.floor(n/100)] + ' ' + numALetras(n % 100);
+            }
+            return n.toString();
+        }
+
+        // Estilos
+        function toggleStyle(s) {
+            styles[s] = !styles[s];
+            document.getElementById('btn' + s.charAt(0).toUpperCase() + s.slice(1)).classList.toggle('active-style');
+            updatePreview();
+        }
+
+        function setColor(c) {
+            document.getElementById('folioColor').value = c;
+            updatePreview();
+        }
+
+        function setAlign(a) {
+            currentAlign = a;
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const folio = document.getElementById('previewFolio');
+            const container = document.getElementById('pageContainer');
+            const isLandscape = document.getElementById('orientation').value === 'landscape';
+            const color = document.getElementById('folioColor').value;
+            const start = document.getElementById('startNum').value;
+
+            // Ajustar Hoja (Escala 1:3 aprox para el preview)
+            if(isLandscape) {
+                container.style.width = '297px'; container.style.height = '210px';
+            } else {
+                container.style.width = '210px'; container.style.height = '297px';
+            }
+
+            // Texto
+            folio.textContent = `${start} ${numALetras(start)}`;
+            folio.style.color = color;
+            folio.style.top = (document.getElementById('vPos').value / 3) + 'px';
+            folio.style.fontWeight = styles.bold ? 'bold' : 'normal';
+            folio.style.fontStyle = styles.italic ? 'italic' : 'normal';
+            folio.style.textDecoration = styles.underline ? 'underline' : 'none';
+
+            folio.style.left = 'auto'; folio.style.right = 'auto'; folio.style.transform = 'none';
+            if(currentAlign === 'left') folio.style.left = '20px';
+            else if(currentAlign === 'center') { folio.style.left = '50%'; folio.style.transform = 'translateX(-50%)'; }
+            else folio.style.right = '20px';
+        }
+
+        // --- PROCESAMIENTO PDF ---
+        async function getFont(doc) {
+            const base = document.getElementById('font').value;
+            let fontStyle = StandardFonts[base];
+            if(styles.bold && styles.italic) fontStyle = StandardFonts[base + 'BoldOblique'] || StandardFonts[base + 'BoldItalic'];
+            else if(styles.bold) fontStyle = StandardFonts[base + 'Bold'];
+            else if(styles.italic) fontStyle = StandardFonts[base + 'Oblique'] || StandardFonts[base + 'Italic'];
