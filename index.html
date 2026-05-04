@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foliador Pro v10.0 - Estabilidad Total</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .active-style { border-color: #3b82f6 !important; background-color: #2563eb !important; color: white; }
+        .page-preview { box-shadow: 0 10px 30px rgba(0,0,0,0.5); background-color: white; overflow: hidden; }
+        .thumb-card { background: #1e293b; border: 1px solid #334155; transition: all 0.2s; }
+        .thumb-card:hover { border-color: #3b82f6; }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-slate-200 min-h-screen p-4 md:p-8 font-sans">
+
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-4 space-y-4">
+            <div class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700 shadow-2xl space-y-4">
+                <h1 class="text-2xl font-black text-blue-500 text-center">FOLIADOR PRO v10.0</h1>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase">Inicio</label>
+                        <input type="number" id="startNum" value="1" oninput="updatePreview()" class="w-full bg-[#0f172a] rounded-lg p-2 border border-slate-700 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase">Fin (Rango)</label>
+                        <input type="number" id="endNum" placeholder="100" class="w-full bg-[#0f172a] rounded-lg p-2 border border-slate-700 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase">Estilo</label>
+                        <div class="flex gap-1">
+                            <button onclick="toggleStyle('bold')" id="btnBold" class="flex-1 bg-slate-700 p-2 rounded font-bold border-2 border-transparent">B</button>
+                            <button onclick="toggleStyle('italic')" id="btnItalic" class="flex-1 bg-slate-700 p-2 rounded italic border-2 border-transparent">I</button>
+                            <button onclick="toggleStyle('underline')" id="btnUnderline" class="flex-1 bg-slate-700 p-2 rounded underline border-2 border-transparent">U</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase">Color</label>
+                        <div class="flex gap-2 items-center h-10">
+                            <button onclick="setColor('#000000')" class="w-6 h-6 rounded-full bg-black border border-slate-400"></button>
+                            <button onclick="setColor('#ff0000')" class="w-6 h-6 rounded-full bg-red-600 border border-slate-400"></button>
+                            <input type="color" id="folioColor" value="#ff0000" oninput="updatePreview()" class="w-8 h-8 bg-transparent cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase">Alineación Horizontal</label>
+                    <div class="flex gap-2 mt-1">
+                        <button onclick="setAlign('left')" id="btnLeft" class="flex-1 bg-slate-700 p-2 rounded border-2 border-transparent">⟸</button>
+                        <button onclick="setAlign('center')" id="btnCenter" class="flex-1 bg-slate-700 p-2 rounded border-2 border-transparent">⟺</button>
+                        <button onclick="setAlign('right')" id="btnRight" class="flex-1 bg-blue-600 p-2 rounded border-2 border-transparent active-style">⟹</button>
+                    </div>
+                </div>
+
+                <div class="pt-2 space-y-3">
+                    <div>
+                        <div class="flex justify-between mb-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Margen Superior</label><span id="vPosVal" class="text-blue-400 text-[10px] font-bold">40px</span></div>
+                        <input type="range" id="vPos" min="0" max="800" value="40" oninput="updatePreview()" class="w-full accent-blue-500">
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Tamaño Letra</label><span id="fontSizeVal" class="text-blue-400 text-[10px] font-bold">25pt</span></div>
+                        <input type="range" id="fontSize" min="6" max="100" value="25" oninput="updatePreview()" class="w-full accent-blue-500">
+                    </div>
+                </div>
+
+                <div class="space-y-2 pt-4">
+                    <button onclick="processFiles()" id="btnAction" disabled class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white font-black py-4 rounded-xl uppercase text-sm shadow-lg transition-all">
+                        Foliar Documentos Cargados
+                    </button>
+                    
+                    <button onclick="generateBlankPages()" class="w-full border border-slate-600 bg-slate-800/50 hover:bg-slate-700 p-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all">
+                        + Generar Hojas en Blanco Foliadas
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-8 space-y-6">
+            <div id="dropZone" class="bg-[#1e293b]/50 border-2 border-dashed border-slate-700 rounded-3xl p-6 text-center hover:border-blue-500 transition-all cursor-pointer min-h-[180px] flex flex-col items-center justify-center">
+                <input type="file" id="fileInput" multiple accept=".pdf" class="hidden">
+                <div id="dropZoneEmpty">
+                    <p class="font-bold text-lg text-slate-300">Suelta tus PDFs aquí</p>
+                    <p class="text-xs text-slate-500 uppercase mt-2">Los documentos aparecerán como miniaturas</p>
+                </div>
+                <div id="fileThumbnails" class="flex flex-wrap gap-4 justify-center w-full"></div>
+            </div>
+
+            <div class="bg-[#1e293b] rounded-2xl border border-slate-700 p-8 flex items-center justify-center min-h-[500px]">
+                <div id="pageContainer" class="page-preview relative">
+                    <div id="previewFolio" class="absolute pointer-events-none whitespace-nowrap">1 UNO</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { PDFDocument, StandardFonts, rgb, degrees } = PDFLib;
+        let selectedFiles = [];
+        let currentAlign = 'right';
+        let styles = { bold: false, italic: false, underline: false };
+
+        function numALetras(n) {
+            const u = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+            const d = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+            const e = {11:'ONCE', 12:'DOCE', 13:'TRECE', 14:'CATORCE', 15:'QUINCE', 16:'DIECISÉIS', 17:'DIECISIETE', 18:'DIECIOCHO', 19:'DIECINUEVE', 21:'VEINTIUNO', 22:'VEINTIDÓS', 23:'VEINTITRÉS', 24:'VEINTICUATRO', 25:'VEINTICINCO', 26:'VEINTISÉIS', 27:'VEINTISIETE', 28:'VEINTIOCHO', 29:'VEINTINUEVE'};
+            n = parseInt(n);
+            if (n === 0) return 'CERO';
+            if (n < 10) return u[n];
+            if (e[n]) return e[n];
+            if (n < 100) return d[Math.floor(n/10)] + (n%10 !== 0 ? ' Y ' + u[n%10] : '');
+            if (n < 1000) {
+                if (n === 100) return 'CIEN';
+                const c = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+                return c[Math.floor(n/100)] + ' ' + numALetras(n % 100);
+            }
+            return n.toString();
+        }
+
+        function toggleStyle(s) { styles[s] = !styles[s]; document.getElementById('btn'+s.charAt(0).toUpperCase()+s.slice(1)).classList.toggle('active-style'); updatePreview(); }
+        function setColor(c) { document.getElementById('folioColor').value = c; updatePreview(); }
+        
+        function setAlign(a) {
+            currentAlign = a;
+            ['Left', 'Center', 'Right'].forEach(id => document.getElementById('btn'+id).classList.remove('active-style', 'bg-blue-600'));
+            document.getElementById('btn'+a.charAt(0).toUpperCase()+a.slice(1)).classList.add('active-style', 'bg-blue-600');
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const folio = document.getElementById('previewFolio');
+            const container = document.getElementById('pageContainer');
+            const vPos = parseInt(document.getElementById('vPos').value);
+            const fSize = parseInt(document.getElementById('fontSize').value);
+            const start = document.getElementById('startNum').value;
+
+            document.getElementById('vPosVal').textContent = vPos + 'px';
+            document.getElementById('fontSizeVal').textContent = fSize + 'pt';
+
+            const scale = 0.5;
+            container.style.width = (595 * scale) + 'px';
+            container.style.height = (841 * scale) + 'px';
+
+            folio.textContent = `${start} ${numALetras(start)}`;
+            folio.style.fontSize = (fSize * scale) + 'px';
+            folio.style.color = document.getElementById('folioColor').value;
+            folio.style.fontWeight = styles.bold ? 'bold' : 'normal';
+            folio.style.fontStyle = styles.italic ? 'italic' : 'normal';
+            folio.style.textDecoration = styles.underline ? 'underline' : 'none';
+            folio.style.fontFamily = 'Arial, sans-serif';
+
+            folio.style.top = (vPos * scale) + 'px';
+            folio.style.left = 'auto'; folio.style.right = 'auto'; folio.style.transform = 'none';
+            if(currentAlign === 'left') folio.style.left = '20px';
+            else if(currentAlign === 'center') { folio.style.left = '50%'; folio.style.transform = 'translateX(-50%)'; }
+            else folio.style.right = '20px';
+        }
+
+        // GESTIÓN DE ARCHIVOS
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        dropZone.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => handleFiles(e.target.files);
+
+        async function handleFiles(files) {
+            for(let f of files) {
+                if(f.type === "application/pdf") selectedFiles.push(f);
+            }
+            renderThumbs();
+        }
+
+        function renderThumbs() {
+            const container = document.getElementById('fileThumbnails');
+            container.innerHTML = '';
+            document.getElementById('dropZoneEmpty').style.display = selectedFiles.length ? 'none' : 'block';
+            
+            selectedFiles.forEach((f, i) => {
+                const div = document.createElement('div');
+                div.className = "thumb-card p-3 rounded-lg relative w-32 text-center";
+                div.innerHTML = `
+                    <button onclick="event.stopPropagation(); removeFile(${i})" class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-[10px]">✕</button>
+                    <div class="text-3xl mb-1">📄</div>
+                    <p class="text-[9px] font-bold truncate">${f.name}</p>
+                `;
+                container.appendChild(div);
+            });
+            document.getElementById('btnAction').disabled = !selectedFiles.length;
+        }
+
+        function removeFile(i) { selectedFiles.splice(i, 1); renderThumbs(); }
+
+        // PROCESO DE FOLIACIÓN SIN GIROS AUTOMÁTICOS
+        async function processFiles() {
+            const startNum = parseInt(document.getElementById('startNum').value);
+            const endLimit = parseInt(document.getElementById('endNum').value) || Infinity;
+            const vPos = parseInt(document.getElementById('vPos').value);
+            const fSize = parseInt(document.getElementById('fontSize').value);
+            const colorHex = document.getElementById('folioColor').value;
+
+            const btn = document.getElementById('btnAction');
+            btn.textContent = "PROCESANDO PDF...";
+            
+            const finalDoc = await PDFDocument.create();
+            const fontBold = await finalDoc.embedFont(StandardFonts.HelveticaBold);
+            const color = rgb(parseInt(colorHex.slice(1,3),16)/255, parseInt(colorHex.slice(3,5),16)/255, parseInt(colorHex.slice(5,7),16)/255);
+
+            let currentF = startNum;
+
+            for (let file of selectedFiles) {
+                const srcDoc = await PDFDocument.load(await file.arrayBuffer());
+                const pages = await finalDoc.copyPages(srcDoc, srcDoc.getPageIndices());
+
+                for (let page of pages) {
+                    if (currentF > endLimit) break;
+                    
+                    // SEGURIDAD: Reset de rotación para que no herede errores del archivo original
+                    page.setRotation(degrees(0)); 
+                    
+                    const { width, height } = page.getSize();
+                    const txt = `${currentF} ${numALetras(currentF)}`;
+                    const tw = fontBold.widthOfTextAtSize(txt, fSize);
+
+                    let x;
+                    if(currentAlign === 'left') x = 50;
+                    else if(currentAlign === 'center') x = (width/2) - (tw/2);
+                    else x = width - tw - 50; // SIEMPRE AL BORDE DERECHO
+
+                    page.drawText(txt, {
+                        x: x,
+                        y: height - vPos - fSize,
+                        size: fSize,
+                        font: fontBold,
+                        color: color
+                    });
+
+                    finalDoc.addPage(page);
+                    currentF++;
+                }
+            }
+
+            const bytes = await finalDoc.save();
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(new Blob([bytes], {type: 'application/pdf'}));
+            link.download = "ARCHIVO_FOLIADO_V10.pdf";
+            link.click();
+            btn.textContent = "Foliar Documentos Cargados";
+        }
+
+        async function generateBlankPages() {
+            const start = parseInt(document.getElementById('startNum').value);
+            const end = parseInt(document.getElementById('endNum').value) || (start + 10);
+            const vPos = parseInt(document.getElementById('vPos').value);
+            const fSize = parseInt(document.getElementById('fontSize').value);
+            const colorHex = document.getElementById('folioColor').value;
+            
+            const doc = await PDFDocument.create();
+            const font = await doc.embedFont(StandardFonts.HelveticaBold);
+            const color = rgb(parseInt(colorHex.slice(1,3),16)/255, parseInt(colorHex.slice(3,5),16)/255, parseInt(colorHex.slice(5,7),16)/255);
+
+            for(let i = start; i <= end; i++) {
+                const page = doc.addPage([595.28, 841.89]); // A4 VERTICAL SIEMPRE
+                const txt = `${i} ${numALetras(i)}`;
+                const tw = font.widthOfTextAtSize(txt, fSize);
+                let x = currentAlign === 'right' ? 595-tw-50 : (currentAlign === 'center' ? 595/2-tw/2 : 50);
+                page.drawText(txt, { x, y: 841-vPos-fSize, size: fSize, font, color });
+            }
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(new Blob([await doc.save()], {type: 'application/pdf'}));
+            link.download = "HOJAS_BLANCAS.pdf"; link.click();
+        }
+
+        updatePreview();
+    </script>
+</body>
+</html>
